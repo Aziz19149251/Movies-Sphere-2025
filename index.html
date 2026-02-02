@@ -43,7 +43,7 @@
         }
         button:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.15); background: #fff; }
 
-        /* --- DESKTOP HELPER TEXT --- */
+        /* --- DESKTOP HELPER TEXT (Default) --- */
         #helper-text { 
             position: absolute; top: 130px; left: 30px; transform: none;
             background: rgba(255,255,255,0.8); padding: 16px 24px; border-radius: 16px; 
@@ -59,7 +59,7 @@
             z-index: 5; background: #000;
         }
         
-        #webcam-video { display: none; } /* Hide raw video, show canvas */
+        #webcam-video { display: none; }
         #output-canvas { width: 100%; height: 100%; transform: scaleX(-1); object-fit: cover; }
         
         #hand-status {
@@ -131,29 +131,39 @@
         @keyframes popIn { from { transform: scale(0.9); } to { transform: scale(1); } }
         @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
-        /* --- MOBILE SPECIFIC STYLES --- */
+        /* --- MOBILE RESPONSIVENESS (UPDATED) --- */
         @media (max-width: 768px) {
-            #page-title { top: 85px; font-size: 18px; padding: 10px 25px; width: 70%; white-space: normal; line-height: 1.2; }
+            #page-title { 
+                top: 85px; /* Sits below the new helper text position */
+                font-size: 18px; 
+                padding: 10px 25px; 
+                width: 70%; 
+                white-space: normal; 
+                line-height: 1.2; 
+            }
             #ui-buttons { top: 20px; left: 20px; }
             button { padding: 10px 20px; font-size: 12px; }
             #modal-info { padding: 15px; width: 90%; }
             #movie-name { font-size: 22px; }
             #movie-desc { font-size: 12px; }
 
-            /* --- FIXED MOBILE HELPER TEXT --- */
-            /* Small, Bottom-Right, Above Webcam */
+            /* --- NEW MOBILE HELPER STYLE (Top Right, Tiny) --- */
             #helper-text { 
-                top: auto;
-                bottom: 190px; /* Sits safely above the webcam area */
-                left: auto;
-                right: 20px;
-                transform: none;
+                top: 20px;       /* Align top with Upload button */
+                right: 20px;     /* Stick to right edge */
+                bottom: auto;    /* Remove bottom positioning */
+                left: auto;      /* Remove left positioning */
+                transform: none; /* Remove centering */
+                
                 width: auto;
-                max-width: 140px; 
-                padding: 10px 12px;
-                font-size: 10px; /* Smaller font */
+                max-width: 150px; 
+                padding: 8px 12px; /* Very compact padding */
+                font-size: 9px;    /* Tiny text */
                 text-align: right;
-                background: rgba(255, 255, 255, 0.75); /* More transparent */
+                
+                background: rgba(255, 255, 255, 0.85);
+                border-radius: 12px; /* Rounded like the button */
+                box-shadow: 0 4px 15px rgba(0,0,0,0.05);
             }
         }
     </style>
