@@ -43,6 +43,7 @@
         }
         button:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.15); background: #fff; }
 
+        /* --- HELPER TEXT (Default Desktop) --- */
         #helper-text { 
             position: absolute; top: 130px; left: 30px; transform: none;
             background: rgba(255,255,255,0.8); padding: 16px 24px; border-radius: 16px; 
@@ -57,7 +58,12 @@
             border: 4px solid #fff; box-shadow: 0 20px 40px rgba(0,0,0,0.25); 
             z-index: 5; background: #000;
         }
-        #webcam-video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); opacity: 0.9; }
+        
+        /* The video element is hidden, we draw on the canvas instead */
+        #webcam-video { display: none; }
+        
+        /* This canvas shows the video + the skeleton lines */
+        #output-canvas { width: 100%; height: 100%; transform: scaleX(-1); object-fit: cover; }
         
         #hand-status {
             position: absolute; bottom: 8px; left: 0; width: 100%;
@@ -128,20 +134,36 @@
         @keyframes popIn { from { transform: scale(0.9); } to { transform: scale(1); } }
         @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
+        /* --- MOBILE RESPONSIVENESS (UPDATED) --- */
         @media (max-width: 768px) {
             #page-title { top: 85px; font-size: 18px; padding: 10px 25px; width: 70%; white-space: normal; line-height: 1.2; }
-            #helper-text { top: auto; bottom: 180px; left: 50%; transform: translateX(-50%); width: 85%; text-align: center; font-size: 13px; padding: 10px 20px; }
             #ui-buttons { top: 20px; left: 20px; }
             button { padding: 10px 20px; font-size: 12px; }
             #modal-info { padding: 15px; width: 90%; }
             #movie-name { font-size: 22px; }
             #movie-desc { font-size: 12px; }
+
+            /* --- NEW MOBILE HELPER STYLE --- */
+            #helper-text { 
+                top: auto; 
+                bottom: 20px; /* Move to bottom */
+                left: auto;
+                right: 20px; /* Move to right */
+                transform: none;
+                width: auto;
+                max-width: 140px; /* Keep it small */
+                text-align: right;
+                font-size: 10px; /* Tiny font */
+                padding: 10px 15px;
+                line-height: 1.4;
+            }
         }
     </style>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script> 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.9.1/gsap.min.js"></script>
 </head>
 <body>
@@ -155,16 +177,16 @@
 
     <div id="helper-text">
         ✋ Open Hand : Zoom In<br>
-        ✊ Close Hand : Close Photo / Zoom Out<br>
-        🕹️ Move Hand : Orbit / Rotate<br>
-        ✌️ 2 Fingers : Open Photo
+        ✊ Close Hand : Close<br>
+        🕹️ Move : Orbit<br>
+        ✌️ 2 Fingers : Open
     </div>
 
     <div id="canvas-container"></div>
     
     <div id="webcam-container">
         <video id="webcam-video" playsinline></video>
-        <div id="hand-status">Waiting for hand...</div>
+        <canvas id="output-canvas"></canvas> <div id="hand-status">Waiting for hand...</div>
     </div>
     
     <div id="modal">
@@ -182,9 +204,9 @@
     const MAX_TEXTURE_SIZE = 1024; 
     const SPHERE_RADIUS = 5.5; 
     const TOTAL_IMAGES_COUNT = 68; 
-    const BASE_PLANE_SIZE = 1.8; 
+    const BASE_PLANE_SIZE = 1.6; // Updated as requested
     
-    const AUTO_ROTATE_SPEED = 0.0005; 
+    const AUTO_ROTATE_SPEED = 0.0035; // Updated as requested
 
     // --- YOUR EXACT DEFAULT IMAGES ---
     const defaultImages = [
@@ -297,11 +319,11 @@
 
     // --- BACKGROUND PARTICLES ---
     const particleGeometry = new THREE.BufferGeometry();
-    const particleCount = 700; // Count
+    const particleCount = 700; 
     const posArray = new Float32Array(particleCount * 3);
 
     for(let i = 0; i < particleCount * 3; i++) {
-        posArray[i] = (Math.random() - 0.5) * 30; // Random distribution
+        posArray[i] = (Math.random() - 0.5) * 30; 
     }
 
     particleGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
@@ -361,10 +383,8 @@
                 planeWidth = BASE_PLANE_SIZE * aspectRatio;
             }
 
-            // 1. High-Segment Plane for Bending
             const geometry = new THREE.PlaneGeometry(planeWidth, planeHeight, 12, 12);
 
-            // 2. CURVE THE GEOMETRY (Concave)
             const pos = geometry.attributes.position;
             for (let i = 0; i < pos.count; i++) {
                 const x = pos.getX(i);
@@ -372,7 +392,7 @@
                 const distSq = x * x + y * y;
                 const zShift = SPHERE_RADIUS - Math.sqrt(Math.max(0, SPHERE_RADIUS * SPHERE_RADIUS - distSq));
                 
-                pos.setZ(i, -zShift); // Negative = Inward Curve
+                pos.setZ(i, -zShift); 
             }
             geometry.computeVertexNormals();
 
@@ -436,12 +456,10 @@
         planes.push(mesh);
     }
 
-    // --- LOAD DEFAULT IMAGES ---
     function initGallery() {
         defaultImages.forEach((filename, index) => {
             if (index >= planes.length) return;
             const mesh = planes[index];
-            
             mesh.userData.imgSrc = filename;
             loadAndProcessImage(filename, mesh, filename);
         });
@@ -449,7 +467,6 @@
 
     initGallery();
 
-    // --- UPLOAD HANDLING ---
     document.getElementById('upload-input').addEventListener('change', (e) => {
         const files = Array.from(e.target.files);
         if (files.length === 0) return;
@@ -472,7 +489,6 @@
             };
             reader.readAsDataURL(file);
         });
-        
         e.target.value = ''; 
     });
 
@@ -512,7 +528,6 @@
                     movieWatch.removeAttribute("href");
                     movieWatch.innerText = meta.platform;
                 }
-                
             } else {
                 movieName.innerText = "Unknown";
                 movieDesc.innerText = "Could not identify content.";
@@ -542,16 +557,16 @@
 
     window.addEventListener('click', (event) => {
         if (event.target.id === 'movie-watch') return;
-        
         if (modal.classList.contains('active')) {
-            // Only click inside modal closes if explicitly coded
         } else if(mouseHoveredObject && mouseHoveredObject.userData.imgSrc) {
             openModal(mouseHoveredObject.userData.imgSrc, mouseHoveredObject.userData.meta);
         }
     });
 
-    // --- HAND TRACKING & LOGIC ---
+    // --- HAND TRACKING & VISUALS ---
     const videoElement = document.getElementById('webcam-video');
+    const canvasElement = document.getElementById('output-canvas');
+    const canvasCtx = canvasElement.getContext('2d');
     const statusText = document.getElementById('hand-status');
     
     let targetRotX = 0;
@@ -565,17 +580,34 @@
     }
 
     function onResults(results) {
-        if (!results.multiHandLandmarks?.length) {
-            isTracking = false; 
-            targetZoom = IDLE_Z; 
+        // 1. Draw video/landmarks on canvas
+        canvasCtx.save();
+        canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+        canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
+        
+        if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+            isTracking = true;
+            statusText.innerText = "Webcam Tracking Active";
+            for (const landmarks of results.multiHandLandmarks) {
+                drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS, {color: '#00FF00', lineWidth: 2});
+                drawLandmarks(canvasCtx, landmarks, {color: '#FF0000', lineWidth: 1});
+                
+                // Process gestures
+                processHandLogic(landmarks);
+            }
+        } else {
+            isTracking = false;
+            targetZoom = IDLE_Z;
             statusText.innerText = "Waiting for hand...";
-            return;
         }
+        canvasCtx.restore();
+    }
 
-        const lm = results.multiHandLandmarks[0];
+    function processHandLogic(lm) {
         const wristToMiddle = getDistance(lm[0], lm[12]);
         const isHandOpen = wristToMiddle > 0.3;
 
+        // Modal Logic
         if(modal.classList.contains('active')) {
             if (!isHandOpen) { 
                 statusText.innerText = "✊ Closing Photo...";
@@ -586,8 +618,7 @@
             return; 
         }
 
-        isTracking = true;
-        
+        // Navigation Logic
         targetRotY = (lm[9].x - 0.5) * 4; 
         targetRotX = (lm[9].y - 0.5) * 2; 
 
@@ -617,17 +648,14 @@
         }
     }
 
-    // --- RESPONSIVE CAMERA LOGIC ---
-    // Check if device is mobile (narrow width)
+    // --- RESPONSIVE CAMERA ---
     const isMobile = window.innerWidth < 768;
-    
-    // Set Camera config based on device
     const cameraConfig = isMobile 
-        ? { width: 480, height: 640 }  // Portrait for Mobile
-        : { width: 320, height: 240 }; // Landscape for Laptop
+        ? { width: 480, height: 640 }  
+        : { width: 320, height: 240 }; 
 
     const hands = new Hands({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`});
-    hands.setOptions({ maxNumHands: 1, modelComplexity: 0, minDetectionConfidence: 0.5 });
+    hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
     hands.onResults(onResults);
     
     const cameraUtils = new Camera(videoElement, {
@@ -637,11 +665,17 @@
     });
     cameraUtils.start();
 
+    // Resize canvas to match video dimensions
+    videoElement.addEventListener('loadedmetadata', () => {
+        canvasElement.width = videoElement.videoWidth;
+        canvasElement.height = videoElement.videoHeight;
+    });
+
     // --- ANIMATION LOOP ---
     function animate() {
         requestAnimationFrame(animate);
 
-        particlesMesh.rotation.y += 0.0005; // Animate particles
+        particlesMesh.rotation.y += 0.0005; 
         particlesMesh.rotation.x -= 0.0002;
 
         mouseRaycaster.setFromCamera(mouse, camera);
