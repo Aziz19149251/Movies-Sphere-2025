@@ -131,23 +131,26 @@
         @keyframes popIn { from { transform: scale(0.9); } to { transform: scale(1); } }
         @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
-        /* --- MOBILE RESPONSIVENESS (UPDATED) --- */
+        /* --- MOBILE RESPONSIVENESS (LAYOUT FIX) --- */
         @media (max-width: 768px) {
+            
+            /* 1. Title moved DOWN to avoid overlap */
             #page-title { 
-                top: 85px; /* Sits below the new helper text position */
-                font-size: 18px; 
+                top: 120px; /* Plenty of space below buttons */
+                font-size: 20px; 
                 padding: 10px 25px; 
                 width: 70%; 
                 white-space: normal; 
                 line-height: 1.2; 
             }
+
             #ui-buttons { top: 20px; left: 20px; }
             button { padding: 10px 20px; font-size: 12px; }
             #modal-info { padding: 15px; width: 90%; }
             #movie-name { font-size: 22px; }
             #movie-desc { font-size: 12px; }
 
-            /* --- NEW MOBILE HELPER STYLE (Top Right, Tiny) --- */
+            /* 2. Helper Text: Tiny, Top-Right Badge */
             #helper-text { 
                 top: 20px;       /* Align top with Upload button */
                 right: 20px;     /* Stick to right edge */
@@ -156,13 +159,13 @@
                 transform: none; /* Remove centering */
                 
                 width: auto;
-                max-width: 150px; 
-                padding: 8px 12px; /* Very compact padding */
+                max-width: 140px; 
+                padding: 8px 12px; /* Very compact */
                 font-size: 9px;    /* Tiny text */
-                text-align: right;
+                text-align: right; /* Text aligns to right */
                 
                 background: rgba(255, 255, 255, 0.85);
-                border-radius: 12px; /* Rounded like the button */
+                border-radius: 15px; /* Badge shape */
                 box-shadow: 0 4px 15px rgba(0,0,0,0.05);
             }
         }
