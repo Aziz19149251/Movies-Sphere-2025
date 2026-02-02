@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Movies Watched in 2025</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+
+    <style>
+        /* --- GLOBAL STYLES --- */
+        body { 
+            margin: 0; overflow: hidden; 
+            font-family: 'GT Alpina', 'Playfair Display', 'Times New Roman', serif;
+            background: url('pixel_cloud.png.jpg') no-repeat center bottom fixed;
+            background-size: cover; 
+            height: 100vh; width: 100vw; user-select: none; 
+        }
+        #canvas-container { width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: 2; }
+        
+        /* --- UI LAYOUT --- */
+        #page-title {
+            position: absolute; top: 30px; left: 50%; transform: translateX(-50%); z-index: 10;
+            background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.4); box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            padding: 12px 40px; border-radius: 50px;
+            font-family: 'GT Alpina', 'Playfair Display', serif; font-size: 24px; font-weight: 700;
+            color: #1a1a1a; letter-spacing: -0.5px; text-align: center; white-space: nowrap;
+        }
+
+        #ui-buttons { 
+            position: absolute; top: 30px; left: 30px; z-index: 10; 
+            display: flex; flex-direction: column; gap: 12px;
+        }
+        
+        button {
+            padding: 12px 28px; background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(12px); 
+            color: #111; border: 1px solid rgba(255,255,255,0.4); border-radius: 99px; cursor: pointer; 
+            font-family: 'GT Alpina', 'Playfair Display', serif; font-weight: 600; font-size: 14px; letter-spacing: 0.5px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08); transition: all 0.2s ease;
+        }
+        button:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.15); background: #fff; }
+
+        #helper-text { 
+            position: absolute; top: 130px; left: 30px; transform: none;
+            background: rgba(255,255,255,0.8); padding: 16px 24px; border-radius: 16px; 
+            font-family: 'GT Alpina', 'Playfair Display', serif; font-size: 14px; font-weight: 500; color: #333;
+            backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.4);
+            text-align: left; line-height: 1.8; z-index: 10; box-shadow: 0 4px 20px rgba(0,0,0,0.1); min-width: 200px;
+        }
+
+        #webcam-container {
+            position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
+            width: 180px; height: 135px; border-radius: 20px; overflow: hidden;
+            border: 4px solid #fff; box-shadow: 0 20px 40px rgba(0,0,0,0.25); 
+            z-index: 5; background: #000;
+        }
+        #webcam-video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); opacity: 0.9; }
+        
+        #hand-status {
+            position: absolute; bottom: 8px; left: 0; width: 100%;
+            text-align: center; color: white; font-size: 11px; font-weight: 600;
+            letter-spacing: 1px; font-family: 'Inter', sans-serif; 
+            text-shadow: 0 1px 3px rgba(0,0,0,0.8); pointer-events: none; opacity: 0.9;
+        }
+
+        /* --- MODAL (LIGHTBOX) --- */
+        #modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.95); display: none;
+            justify-content: center; align-items: center; z-index: 20; cursor: default; backdrop-filter: blur(10px);
+            flex-direction: column;
+        }
+        #modal.active { display: flex; animation: fadeIn 0.3s forwards; }
+        
+        #modal img { 
+            max-width: 80%; max-height: 55vh; 
+            border-radius: 12px; box-shadow: 0 0 80px rgba(0,0,0,0.5); 
+            transform: scale(0.9); animation: popIn 0.3s forwards; margin-bottom: 25px;
+            cursor: pointer;
+        }
+
+        /* --- AI INFO CARD --- */
+        #modal-info {
+            width: 80%; max-width: 600px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 25px; border-radius: 20px;
+            text-align: center; color: white;
+            transform: translateY(20px); opacity: 0;
+            animation: slideUp 0.5s forwards 0.2s;
+        }
+
+        #ai-label {
+            font-family: 'Inter', sans-serif; font-size: 10px; letter-spacing: 2px; font-weight: 700;
+            color: #4facfe; text-transform: uppercase; margin-bottom: 8px; display: block;
+        }
+
+        #movie-name {
+            font-family: 'GT Alpina', 'Playfair Display', serif; font-size: 28px; font-weight: 700; margin: 0 0 10px 0;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+
+        #movie-desc {
+            font-family: 'Inter', sans-serif; font-size: 14px; line-height: 1.6; color: rgba(255,255,255,0.8); margin-bottom: 20px;
+        }
+
+        a#movie-watch {
+            display: inline-block; padding: 10px 24px; 
+            background: rgba(255, 255, 255, 0.95); border-radius: 50px;
+            font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 0.5px;
+            color: #000; text-decoration: none;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: transform 0.2s, box-shadow 0.2s;
+            pointer-events: auto; 
+        }
+        
+        a#movie-watch:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(255, 255, 255, 0.4);
+            background: #fff;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes popIn { from { transform: scale(0.9); } to { transform: scale(1); } }
+        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+        /* --- MOBILE RESPONSIVENESS --- */
+        @media (max-width: 768px) {
+            #page-title { top: 85px; font-size: 18px; padding: 10px 25px; width: 70%; white-space: normal; line-height: 1.2; }
+            #helper-text { top: auto; bottom: 180px; left: 50%; transform: translateX(-50%); width: 85%; text-align: center; font-size: 13px; padding: 10px 20px; }
+            #ui-buttons { top: 20px; left: 20px; }
+            button { padding: 10px 20px; font-size: 12px; }
+            #modal-info { padding: 15px; width: 90%; }
+            #movie-name { font-size: 22px; }
+            #movie-desc { font-size: 12px; }
+        }
+    </style>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.9.1/gsap.min.js"></script>
+</head>
+<body>
+
+    <div id="page-title">Movies Watched in 2025</div>
+
+    <div id="ui-buttons">
+        <button onclick="document.getElementById('upload-input').click()">+ Upload Photos</button>
+        <input type="file" id="upload-input" multiple accept="image/*" style="display:none">
+    </div>
+
+    <div id="helper-text">
+        ✋ Open Hand : Zoom In<br>
+        ✊ Close Hand : Close Photo / Zoom Out<br>
+        🕹️ Move Hand : Orbit / Rotate<br>
+        ✌️ 2 Fingers : Open Photo
+    </div>
+
+    <div id="canvas-container"></div>
+    
+    <div id="webcam-container">
+        <video id="webcam-video" playsinline></video>
+        <div id="hand-status">Waiting for hand...</div>
+    </div>
+    
+    <div id="modal">
+        <img id="modal-img" src="" onclick="closeModal()">
+        <div id="modal-info">
+            <span id="ai-label">✨ AI Analyzing...</span>
+            <h2 id="movie-name">Loading...</h2>
+            <p id="movie-desc">Identifying content...</p>
+            <a id="movie-watch" href="#" target="_blank">Searching...</a>
+        </div>
+    </div>
+
+<script>
+    // --- CONFIGURATION ---
+    const MAX_TEXTURE_SIZE = 1024; 
+    const SPHERE_RADIUS = 5.5; 
+    const TOTAL_IMAGES_COUNT = 68; 
+    const BASE_PLANE_SIZE = 1.6; 
+    
+    const AUTO_ROTATE_SPEED = 0.0035; 
+
+    // --- YOUR EXACT DEFAULT IMAGES ---
+    const defaultImages = [
+        "5 Centimeters per Second Poster.jpg", "10 Things I Hate About You Poster.jpg", "13 Going on 30 Poster.jpg", 
+        "About Time Poster.jpg", "Anand poster OG.jpg", "Atonement poster.jpg", "Back to the Future.jpg", 
+        "Before sunrise poster.jpg", "Dead Poets Society Poster.jpg", "Dev.D poster.jpg", "Dhurandhar Poster.jpg", 
+        "Dil Chahta Hai Poster.jpg", "Dune Poster.jpg", "Eternal Sunshine of the Spotless Mind Poster.jpg", 
+        "Ferris Bueller’s Day Off Poster.jpg", "Fight Club Poster.jpg", "final-destination-4.jpg", "Forrest Gump Poster.jpg", 
+        "Godfather.jpg", "Good Will Hunting Poster.jpg", "Grave of the Fireflies Poster.jpg", "Home Alone 2 Poster.jpg", 
+        "Home Alone Poster.jpg", "Homebound poster.jpg", "How to Lose a Guy in 10 Days Poster.jpg", "Howl’s Moving Castle Poster.jpg", 
+        "I Want to Eat Your Pancreas Poster.jpg", "inception.jpg", "Into the Wild Poster.jpg", "It's a Wonderful life poster.jpg", 
+        "Jannat Poster.jpg", "Kazag ke phool poster.jpg", "Love Actually Poster.jpg", "matrix.jpg", "Memento Poster.jpg", 
+        "men-in-black-3.jpg", "mona-lisa-4893660.jpg", "Mughual-e-azam poster.jpg", "No Smoking Poster.jpg", 
+        "Oye Lucky! Lucky Oye! Poster.jpg", "Past Lives poster.jpg", "Paying Guest Poster.jpg", "pride and prejudice.poster.jpg", 
+        "Pyaasa Poster.jpg", "Se7en poster.jpg", "Shree 420 Poster.jpg", "Shutter Island Poster.jpg", 
+        "Slumdog Millionaire Poster.jpg", "Spider Man Poster (Dream).jpg", "Spirited Away Poster.jpg", "Stand by Me Poster.jpg", 
+        "Studio-Ghibli-2.jpg", "Swades Poster.jpg", "Tenet Poster.jpg", "The Godfather Poster.jpg", "The Lunchbox Poster.jpg", 
+        "The Notebook Poster.jpg", "The Princess Diaries Poster.jpg", "The Pursuit of Happyness Poster.jpg", "The Shawshank Redemption Poster.jpg", 
+        "The Silent Voice Poster.jpg", "The Social Network Poster.jpg", "The Truman Show Poster.jpg", "The Wind Rises Poster.jpg", 
+        "the-grinch.jpg", "the-sixth-sense poster.jpg", "thor-1.jpg", "Whiplash Poster.jpg", "Zodiac Poster.jpg"
+    ];
+
+    // --- METADATA DATABASE (For AI Logic) ---
+    const movieDatabase = [
+        { title: "5 Centimeters per Second", desc: "A beautifully animated romantic drama about distance and fading love.", url: "https://www.crunchyroll.com/series/GRPX19116/5-centimeters-per-second", platform: "Crunchyroll" },
+        { title: "10 Things I Hate About You", desc: "A modern high school retelling of Shakespeare's Taming of the Shrew.", url: "https://www.disneyplus.com/movies/10-things-i-hate-about-you/35073007", platform: "Disney+" },
+        { title: "13 Going on 30", desc: "A girl makes a wish on her 13th birthday and wakes up as a 30-year-old woman.", url: "https://www.netflix.com/title/60034573", platform: "Netflix" },
+        { title: "About Time", desc: "A young man discovers he can travel in time and change what happens in his own life.", url: "https://www.amazon.com/About-Time-Domhnall-Gleeson/dp/B00H9KKK6K", platform: "Prime Video" },
+        { title: "Anand", desc: "The story of a terminally ill man who wishes to live life to the fullest.", url: "https://www.primevideo.com/detail/Anand/0LTIJ5S3Z5K9K9K9K9K9K9K9K9", platform: "Prime Video" },
+        { title: "Atonement", desc: "A thirteen-year-old writer irrevocably changes the course of several lives when she accuses her older sister's lover of a crime.", url: "https://www.amazon.com/Atonement-Keira-Knightley/dp/B0013K3K6K", platform: "Prime Video" },
+        { title: "Back to the Future", desc: "Marty McFly, a 17-year-old high school student, is accidentally sent thirty years into the past.", url: "https://www.netflix.com/title/286326", platform: "Netflix" },
+        { title: "Before Sunrise", desc: "A young man and woman meet on a train in Europe, and wind up spending one evening together in Vienna.", url: "https://www.amazon.com/Before-Sunrise-Ethan-Hawke/dp/B001W6Q2K6", platform: "Prime Video" },
+        { title: "Dead Poets Society", desc: "An English teacher inspires his students to discover their love for poetry and seize the day.", url: "https://www.disneyplus.com/movies/dead-poets-society/35073007", platform: "Disney+" },
+        { title: "Dev.D", desc: "A modern-day take on 'Devdas', set in the rust belt of Punjab and Delhi.", url: "https://www.netflix.com/title/70114006", platform: "Netflix" },
+        { title: "Dhurandhar", desc: "An action-packed thriller featuring high-stakes drama.", url: "https://www.google.com/search?q=watch+dhurandhar+movie", platform: "Cinemas / Google" },
+        { title: "Dil Chahta Hai", desc: "Three inseparable childhood friends are just out of college. Nothing comes between them - until they each fall in love.", url: "https://www.netflix.com/title/60021525", platform: "Netflix" },
+        { title: "Dune", desc: "A noble family becomes embroiled in a war for control over the galaxy's most valuable asset.", url: "https://www.max.com/movies/dune/35073007", platform: "HBO Max / JioCinema" },
+        { title: "Eternal Sunshine of the Spotless Mind", desc: "When their relationship turns sour, a couple undergoes a medical procedure to have each other erased from their memories.", url: "https://www.amazon.com/Eternal-Sunshine-Spotless-Mind-Carrey/dp/B000I9S6K8", platform: "Prime Video" },
+        { title: "Ferris Bueller's Day Off", desc: "A high school wise guy is determined to have a day off from school, despite what the Principal thinks of that.", url: "https://www.amazon.com/Ferris-Buellers-Day-Matthew-Broderick/dp/B000I9YV6K", platform: "Prime Video" },
+        { title: "Fight Club", desc: "An insomniac office worker and a devil-may-care soap maker form an underground fight club.", url: "https://www.amazon.com/Fight-Club-Brad-Pitt/dp/B000I9YV6K", platform: "Prime Video" },
+        { title: "Final Destination 4", desc: "A horrifying premonition saves a young man and his friends from death during a racetrack accident, but death returns.", url: "https://www.netflix.com/title/70114006", platform: "Netflix" },
+        { title: "Forrest Gump", desc: "The presidencies of Kennedy and Johnson, the Vietnam War, and the Watergate scandal are viewed through the eyes of an Alabama man.", url: "https://www.netflix.com/title/60000724", platform: "Netflix" },
+        { title: "The Godfather", desc: "The aging patriarch of an organized crime dynasty transfers control of his clandestine empire to his reluctant son.", url: "https://www.amazon.com/Godfather-Marlon-Brando/dp/B000I9YV6K", platform: "Prime Video" },
+        { title: "Good Will Hunting", desc: "Will Hunting, a janitor at M.I.T., has a gift for mathematics, but needs help from a psychologist to find direction in his life.", url: "https://www.amazon.com/Good-Will-Hunting-Matt-Damon/dp/B000I9YV6K", platform: "Prime Video" },
+        { title: "Grave of the Fireflies", desc: "A young boy and his little sister struggle to survive in Japan during World War II.", url: "https://www.netflix.com/title/60000724", platform: "Netflix" },
+        { title: "Home Alone 2", desc: "One year after Kevin McCallister was left home alone and had to defeat a pair of bumbling burglars, he accidentally finds himself stranded in New York City.", url: "https://www.disneyplus.com/movies/home-alone-2-lost-in-new-york/35073007", platform: "Disney+" },
+        { title: "Home Alone", desc: "An eight-year-old troublemaker must protect his house from a pair of burglars when he is accidentally left home alone by his family during Christmas vacation.", url: "https://www.disneyplus.com/movies/home-alone/35073007", platform: "Disney+" },
+        { title: "Homebound", desc: "A twisty thriller about family secrets and a father's new wife.", url: "https://www.google.com/search?q=watch+homebound+movie", platform: "Google Search" },
+        { title: "How to Lose a Guy in 10 Days", desc: "Benjamin Barry is an advertising executive and ladies' man who, to win a big campaign, bets that he can make a woman fall in love with him in 10 days.", url: "https://www.netflix.com/title/60027592", platform: "Netflix" },
+        { title: "Howl's Moving Castle", desc: "When an unconfident young woman is cursed with an old body by a spiteful witch, her only chance of breaking the spell lies with a self-indulgent yet insecure young wizard.", url: "https://www.netflix.com/title/70028883", platform: "Netflix" },
+        { title: "I Want to Eat Your Pancreas", desc: "An aloof boy comes across a book in a hospital waiting room. He soon discovers that it is a diary kept by his very popular classmate who reveals to him that she is secretly suffering from a fatal pancreatic illness.", url: "https://www.netflix.com/title/81029048", platform: "Netflix" },
+        { title: "Inception", desc: "A thief who steals corporate secrets through the use of dream-sharing technology is given the inverse task of planting an idea into the mind of a C.E.O.", url: "https://www.netflix.com/title/70131314", platform: "Netflix" },
+        { title: "Into the Wild", desc: "After graduating from Emory University, top student and athlete Christopher McCandless abandons his possessions, gives his entire $24,000 savings account to charity and hitchhikes to Alaska to live in the wilderness.", url: "https://www.amazon.com/Into-Wild-Emile-Hirsch/dp/B0013K3K6K", platform: "Prime Video" },
+        { title: "It's a Wonderful Life", desc: "An angel is sent from Heaven to help a desperately frustrated businessman by showing him what life would have been like if he had never existed.", url: "https://www.amazon.com/Its-Wonderful-Life-James-Stewart/dp/B000I9YV6K", platform: "Prime Video" },
+        { title: "Jannat", desc: "A man caught in a life of crime finds love, but his past threatens to destroy his future.", url: "https://www.primevideo.com/detail/Jannat/0LTIJ5S3Z5K9K9K9K9K9K9K9K9", platform: "Prime Video" },
+        { title: "Kaagaz Ke Phool", desc: "A celebrated film director discovers a new star, but his own career dwindles as hers rises.", url: "https://www.primevideo.com/detail/Kaagaz-Ke-Phool/0LTIJ5S3Z5K9K9K9K9K9K9K9K9", platform: "Prime Video" },
+        { title: "Love Actually", desc: "Follows the lives of eight very different couples in dealing with their love lives in various loosely interrelated tales all set during a frantic month before Christmas in London, England.", url: "https://www.netflix.com/title/60031262", platform: "Netflix" },
+        { title: "The Matrix", desc: "A computer hacker learns from mysterious rebels about the true nature of his reality and his role in the war against its controllers.", url: "https://www.netflix.com/title/20557937", platform: "Netflix" },
+        { title: "Memento", desc: "A man with short-term memory loss attempts to track down his wife's murderer.", url: "https://www.amazon.com/Memento-Guy-Pearce/dp/B000I9YV6K", platform: "Prime Video" },
+        { title: "Men in Black 3", desc: "Agent J travels in time to M.I.B.'s early days in 1969 to stop an alien from assassinating his friend Agent K and changing history.", url: "https://www.netflix.com/title/70217909", platform: "Netflix" },
+        { title: "Mona Lisa Smile", desc: "A free-thinking art professor teaches conservative 1950s Wellesley girls to question their traditional social roles.", url: "https://www.netflix.com/title/60031288", platform: "Netflix" },
+        { title: "Mughal-e-Azam", desc: "A 16th-century prince falls in love with a court dancer and battles with his emperor father.", url: "https://www.primevideo.com/detail/Mughal-E-Azam/0LTIJ5S3Z5K9K9K9K9K9K9K9K9", platform: "Prime Video" },
+        { title: "No Smoking", desc: "A man who is addicted to smoking visits a rehabilitation center that claims to cure him, but at a heavy price.", url: "https://www.zee5.com/movies/details/no-smoking/0-0-167885", platform: "Zee5" },
+        { title: "Oye Lucky! Lucky Oye!", desc: "A charismatic thief reflects on his life and loves while being pursued by the police.", url: "https://www.netflix.com/title/70105934", platform: "Netflix" },
+        { title: "Past Lives", desc: "Nora and Hae Sung, two deeply connected childhood friends, are wrested apart after her family emigrates from South Korea.", url: "https://www.amazon.com/Past-Lives-Greta-Lee/dp/B0CV69Y32J", platform: "Prime Video" },
+        { title: "Paying Guest", desc: "A lawyer takes up accommodation as a paying guest and falls in love with the landlord's daughter.", url: "https://www.youtube.com/results?search_query=paying+guest+movie", platform: "YouTube" },
+        { title: "Pride & Prejudice", desc: "Sparks fly when spirited Elizabeth Bennet meets single, rich, and proud Mr. Darcy.", url: "https://www.netflix.com/title/70032594", platform: "Netflix" },
+        { title: "Pyaasa", desc: "A talented but indigent poet Vijay struggles for love and recognition in this social drama.", url: "https://www.primevideo.com/detail/Pyaasa/0LTIJ5S3Z5K9K9K9K9K9K9K9K9", platform: "Prime Video" },
+        { title: "Se7en", desc: "Two detectives, a rookie and a veteran, hunt a serial killer who uses the seven deadly sins as his motives.", url: "https://www.netflix.com/title/950149", platform: "Netflix" },
+        { title: "Shree 420", desc: "A country boy travels to Bombay to make a living but is led astray by the unethical lifestyle of the city.", url: "https://www.primevideo.com/detail/Shree-420/0LTIJ5S3Z5K9K9K9K9K9K9K9K9", platform: "Prime Video" },
+        { title: "Shutter Island", desc: "In 1954, a U.S. Marshal investigates the disappearance of a murderer who escaped from a hospital for the criminally insane.", url: "https://www.netflix.com/title/70095139", platform: "Netflix" },
+        { title: "Slumdog Millionaire", desc: "A Mumbai teen reflects on his life after being accused of cheating on the Indian version of 'Who Wants to Be a Millionaire?'.", url: "https://www.hotstar.com/in/movies/slumdog-millionaire/1000001452", platform: "Hotstar" },
+        { title: "Spider-Man", desc: "When bitten by a genetically modified spider, a nerdy, shy, and awkward high school student gains spider-like abilities.", url: "https://www.netflix.com/title/60004481", platform: "Netflix" },
+        { title: "Spirited Away", desc: "During her family's move to the suburbs, a sullen 10-year-old girl wanders into a world ruled by gods, witches, and spirits.", url: "https://www.netflix.com/title/60023642", platform: "Netflix" },
+        { title: "Stand by Me", desc: "After the death of a friend, a writer recounts a boyhood journey to find the body of a missing boy.", url: "https://www.netflix.com/title/994992", platform: "Netflix" },
+        { title: "Studio Ghibli Collection", desc: "A collection of masterpieces from the legendary Japanese animation studio.", url: "https://www.netflix.com/", platform: "Netflix" },
+        { title: "Swades", desc: "A successful Indian scientist returns to an Indian village to take his nanny to America with him and in the process rediscovers his roots.", url: "https://www.netflix.com/title/70019491", platform: "Netflix" },
+        { title: "Tenet", desc: "Armed with only one word, Tenet, and fighting for the survival of the entire world, a Protagonist journeys through a twilight world of international espionage.", url: "https://www.netflix.com/title/81198906", platform: "Netflix" },
+        { title: "The Lunchbox", desc: "A mistaken delivery in Mumbai's famously efficient lunchbox delivery system connects a young housewife to an older man in the dusk of his life.", url: "https://www.netflix.com/title/70275932", platform: "Netflix" },
+        { title: "The Notebook", desc: "A poor yet passionate young man falls in love with a rich young woman, giving her a sense of freedom, but they are soon separated because of their social differences.", url: "https://www.netflix.com/title/60036227", platform: "Netflix" },
+        { title: "The Princess Diaries", desc: "Mia Thermopolis has just found out that she is the heir apparent to the throne of Genovia.", url: "https://www.disneyplus.com/movies/the-princess-diaries/35073007", platform: "Disney+" },
+        { title: "The Pursuit of Happyness", desc: "A struggling salesman takes custody of his son as he's poised to begin a life-changing professional career.", url: "https://www.netflix.com/title/70044605", platform: "Netflix" },
+        { title: "The Shawshank Redemption", desc: "Two imprisoned men bond over a number of years, finding solace and eventual redemption through acts of common decency.", url: "https://www.netflix.com/title/70005379", platform: "Netflix" },
+        { title: "A Silent Voice", desc: "A young man is ostracized by his classmates after he bullies a deaf girl to the point where she moves away.", url: "https://www.netflix.com/title/80223226", platform: "Netflix" },
+        { title: "The Social Network", desc: "As Harvard student Mark Zuckerberg creates the social networking site that would become known as Facebook, he is sued by the twins who claimed he stole their idea.", url: "https://www.netflix.com/title/70132721", platform: "Netflix" },
+        { title: "The Truman Show", desc: "An insurance salesman discovers his whole life is actually a reality TV show.", url: "https://www.netflix.com/title/11819086", platform: "Netflix" },
+        { title: "The Wind Rises", desc: "A look at the life of Jiro Horikoshi, the man who designed Japanese fighter planes during World War II.", url: "https://www.netflix.com/title/70293674", platform: "Netflix" },
+        { title: "The Grinch", desc: "A grumpy Grinch plots to ruin Christmas for the village of Whoville.", url: "https://www.netflix.com/title/60000907", platform: "Netflix" },
+        { title: "The Sixth Sense", desc: "A frightened, withdrawn Philadelphia 8-year-old boy communicates with spirits and seeks the help of a disheartened child psychologist.", url: "https://www.disneyplus.com/movies/the-sixth-sense/35073007", platform: "Disney+" },
+        { title: "Thor", desc: "The powerful but arrogant god Thor is cast out of Asgard to live amongst humans in Midgard (Earth), where he soon becomes one of their finest defenders.", url: "https://www.disneyplus.com/movies/thor/35073007", platform: "Disney+" },
+        { title: "Whiplash", desc: "A promising young drummer enrolls at a cut-throat music conservatory where his dreams of greatness are mentored by an instructor who will stop at nothing to realize a student's potential.", url: "https://www.netflix.com/title/70300063", platform: "Netflix" },
+        { title: "Zodiac", desc: "In the late 1960s/early 1970s, a San Francisco cartoonist becomes an amateur detective obsessed with tracking down the Zodiac Killer.", url: "https://www.netflix.com/title/70044686", platform: "Netflix" }
+    ];
+
+    // --- THREE.JS SETUP ---
+    const scene = new THREE.Scene();
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); 
+    renderer.outputEncoding = THREE.sRGBEncoding;
+    document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+    const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 1000); 
+    const IDLE_Z = 16.0; 
+    const ACTIVE_Z_MIN = 1.5; 
+    camera.position.z = IDLE_Z;
+
+    const imageGroup = new THREE.Group();
+    scene.add(imageGroup);
+
+    // --- BACKGROUND PARTICLES ---
+    const particleGeometry = new THREE.BufferGeometry();
+    const particleCount = 700; // Count
+    const posArray = new Float32Array(particleCount * 3);
+
+    for(let i = 0; i < particleCount * 3; i++) {
+        posArray[i] = (Math.random() - 0.5) * 30; // Random distribution
+    }
+
+    particleGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+
+    const particleMaterial = new THREE.PointsMaterial({
+        size: 0.03,
+        color: 0x888888,
+        transparent: true,
+        opacity: 0.4
+    });
+
+    const particlesMesh = new THREE.Points(particleGeometry, particleMaterial);
+    scene.add(particlesMesh);
+
+    function createPlaceholderTexture() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 64; canvas.height = 64; 
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = "rgba(255,255,255,0.85)"; ctx.fillRect(0,0,64,64);
+        return new THREE.CanvasTexture(canvas);
+    }
+
+    // --- SMART RECOGNITION LOGIC ---
+    function findMovieMetadata(filename) {
+        if (!filename) return null;
+        
+        const cleanName = filename.toLowerCase()
+            .replace(/\.(jpg|jpeg|png|webp)$/, '') 
+            .replace(/[-_]/g, " ")
+            .replace(/poster/g, "")
+            .trim();
+
+        const match = movieDatabase.find(movie => {
+            const cleanTitle = movie.title.toLowerCase();
+            return cleanName.includes(cleanTitle) || cleanTitle.includes(cleanName);
+        });
+
+        return match || {
+            title: filename.replace(/\.(jpg|jpeg|png|webp)$/, ''),
+            desc: "Custom uploaded image.",
+            url: "#",
+            platform: "Local File"
+        };
+    }
+
+    // --- CURVED GEOMETRY & SMART LOADER ---
+    function loadAndProcessImage(src, mesh, filename) {
+        const img = new Image();
+        img.onload = () => {
+            const aspectRatio = img.width / img.height;
+            let planeWidth = BASE_PLANE_SIZE;
+            let planeHeight = BASE_PLANE_SIZE;
+
+            if (aspectRatio > 1) { 
+                planeHeight = BASE_PLANE_SIZE / aspectRatio;
+            } else { 
+                planeWidth = BASE_PLANE_SIZE * aspectRatio;
+            }
+
+            // 1. High-Segment Plane for Bending
+            const geometry = new THREE.PlaneGeometry(planeWidth, planeHeight, 12, 12);
+
+            // 2. CURVE THE GEOMETRY (Concave)
+            const pos = geometry.attributes.position;
+            for (let i = 0; i < pos.count; i++) {
+                const x = pos.getX(i);
+                const y = pos.getY(i);
+                const distSq = x * x + y * y;
+                const zShift = SPHERE_RADIUS - Math.sqrt(Math.max(0, SPHERE_RADIUS * SPHERE_RADIUS - distSq));
+                
+                pos.setZ(i, -zShift); // Negative = Inward Curve
+            }
+            geometry.computeVertexNormals();
+
+            mesh.geometry.dispose();
+            mesh.geometry = geometry;
+            
+            const canvas = document.createElement('canvas');
+            const maxDim = Math.max(img.width, img.height);
+            const scale = (maxDim > MAX_TEXTURE_SIZE) ? (MAX_TEXTURE_SIZE / maxDim) : 1;
+            canvas.width = img.width * scale;
+            canvas.height = img.height * scale;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.minFilter = THREE.LinearFilter;
+            texture.generateMipmaps = false;
+            texture.encoding = THREE.sRGBEncoding;
+            texture.anisotropy = renderer.capabilities.getMaxAnisotropy(); 
+
+            mesh.material.map.dispose();
+            mesh.material.map = texture;
+            mesh.material.color.set(0xffffff); 
+            mesh.material.needsUpdate = true;
+        };
+        
+        img.onerror = () => { 
+             console.warn("Could not load image:", src);
+             mesh.material.map = createPlaceholderTexture();
+        }
+        img.crossOrigin = "Anonymous"; 
+        img.src = src;
+        
+        const meta = findMovieMetadata(filename);
+        mesh.userData.meta = meta;
+    }
+
+    // --- INITIALIZE SPHERE ---
+    const phi = Math.PI * (3 - Math.sqrt(5)); 
+    let planes = [];
+
+    for (let i = 0; i < TOTAL_IMAGES_COUNT; i++) {
+        const y = 1 - (i / (TOTAL_IMAGES_COUNT - 1)) * 2;
+        const r_at_y = Math.sqrt(1 - y * y);
+        const theta = phi * i;
+        const x = Math.cos(theta) * r_at_y;
+        const z = Math.sin(theta) * r_at_y;
+
+        const geometry = new THREE.PlaneGeometry(BASE_PLANE_SIZE, BASE_PLANE_SIZE);
+        const material = new THREE.MeshBasicMaterial({ 
+            map: createPlaceholderTexture(), side: THREE.DoubleSide, color: 0xcccccc 
+        });
+
+        const mesh = new THREE.Mesh(geometry, material);
+        mesh.position.set(x * SPHERE_RADIUS, y * SPHERE_RADIUS, z * SPHERE_RADIUS);
+        mesh.lookAt(0, 0, 0); 
+        mesh.rotateY(Math.PI); 
+        
+        mesh.userData = { id: i, imgSrc: null, meta: null };
+        imageGroup.add(mesh);
+        planes.push(mesh);
+    }
+
+    // --- LOAD DEFAULT IMAGES ---
+    function initGallery() {
+        defaultImages.forEach((filename, index) => {
+            if (index >= planes.length) return;
+            const mesh = planes[index];
+            
+            mesh.userData.imgSrc = filename;
+            loadAndProcessImage(filename, mesh, filename);
+        });
+    }
+
+    initGallery();
+
+    // --- UPLOAD HANDLING ---
+    document.getElementById('upload-input').addEventListener('change', (e) => {
+        const files = Array.from(e.target.files);
+        if (files.length === 0) return;
+        
+        planes.forEach(p => {
+             p.material.map = createPlaceholderTexture();
+             p.userData.imgSrc = null;
+             p.userData.meta = null;
+        });
+
+        files.forEach((file, index) => {
+            const meshIndex = index % TOTAL_IMAGES_COUNT;
+            const mesh = planes[meshIndex];
+            
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const imgSrc = event.target.result;
+                mesh.userData.imgSrc = imgSrc;
+                loadAndProcessImage(imgSrc, mesh, file.name); 
+            };
+            reader.readAsDataURL(file);
+        });
+        
+        e.target.value = ''; 
+    });
+
+    // --- MODAL LOGIC ---
+    const modal = document.getElementById('modal');
+    const modalImg = document.getElementById('modal-img');
+    const aiLabel = document.getElementById('ai-label');
+    const movieName = document.getElementById('movie-name');
+    const movieDesc = document.getElementById('movie-desc');
+    const movieWatch = document.getElementById('movie-watch');
+
+    function openModal(src, meta) {
+        if(!src) return;
+        modalImg.src = src;
+        modal.classList.add('active');
+        isTracking = false; 
+
+        aiLabel.innerText = "✨ AI Analyzing...";
+        aiLabel.style.color = "#4facfe";
+        movieName.innerText = "Scanning...";
+        movieDesc.innerText = "Identifying visual patterns...";
+        movieWatch.style.opacity = "0";
+        movieWatch.style.pointerEvents = "none"; 
+
+        setTimeout(() => {
+            aiLabel.innerText = "✓ AI Identified";
+            aiLabel.style.color = "#66ff66";
+            
+            if (meta) {
+                movieName.innerText = meta.title;
+                movieDesc.innerText = meta.desc;
+                
+                if (meta.url && meta.url !== "#") {
+                    movieWatch.href = meta.url;
+                    movieWatch.innerText = "Watch on " + meta.platform + " ↗";
+                } else {
+                    movieWatch.removeAttribute("href");
+                    movieWatch.innerText = meta.platform;
+                }
+                
+            } else {
+                movieName.innerText = "Unknown";
+                movieDesc.innerText = "Could not identify content.";
+                movieWatch.innerText = "No Info";
+            }
+            movieWatch.style.opacity = "1";
+            movieWatch.style.pointerEvents = "auto"; 
+        }, 800);
+    }
+
+    function closeModal() {
+        modal.classList.remove('active');
+    }
+
+    // --- INTERACTION ---
+    const mouseRaycaster = new THREE.Raycaster();
+    const centerRaycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+    const centerPoint = new THREE.Vector2(0, 0); 
+    let mouseHoveredObject = null;
+    let centerHoveredObject = null;
+
+    window.addEventListener('mousemove', (event) => {
+        mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+        mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+    });
+
+    window.addEventListener('click', (event) => {
+        if (event.target.id === 'movie-watch') return;
+        
+        if (modal.classList.contains('active')) {
+            // Only click inside modal closes if explicitly coded
+        } else if(mouseHoveredObject && mouseHoveredObject.userData.imgSrc) {
+            openModal(mouseHoveredObject.userData.imgSrc, mouseHoveredObject.userData.meta);
+        }
+    });
+
+    // --- HAND TRACKING & LOGIC ---
+    const videoElement = document.getElementById('webcam-video');
+    const statusText = document.getElementById('hand-status');
+    
+    let targetRotX = 0;
+    let targetRotY = 0;
+    let targetZoom = IDLE_Z;
+    let isTracking = false;
+    let gestureCooldown = false;
+
+    function getDistance(lm1, lm2) {
+        return Math.hypot(lm1.x - lm2.x, lm1.y - lm2.y);
+    }
+
+    function onResults(results) {
+        if (!results.multiHandLandmarks?.length) {
+            isTracking = false; 
+            targetZoom = IDLE_Z; 
+            statusText.innerText = "Waiting for hand...";
+            return;
+        }
+
+        const lm = results.multiHandLandmarks[0];
+        const wristToMiddle = getDistance(lm[0], lm[12]);
+        const isHandOpen = wristToMiddle > 0.3;
+
+        if(modal.classList.contains('active')) {
+            if (!isHandOpen) { 
+                statusText.innerText = "✊ Closing Photo...";
+                closeModal();
+            } else {
+                statusText.innerText = "✊ Close Hand to Exit Photo";
+            }
+            return; 
+        }
+
+        isTracking = true;
+        
+        targetRotY = (lm[9].x - 0.5) * 4; 
+        targetRotX = (lm[9].y - 0.5) * 2; 
+
+        const isVictory = (
+            lm[8].y < lm[6].y && 
+            lm[12].y < lm[10].y && 
+            lm[16].y > lm[14].y && 
+            lm[20].y > lm[18].y
+        );
+
+        if (isVictory && !gestureCooldown) {
+            if(centerHoveredObject && centerHoveredObject.userData.imgSrc) {
+                 openModal(centerHoveredObject.userData.imgSrc, centerHoveredObject.userData.meta);
+                 statusText.innerText = "✌️ Opening Photo!";
+                 gestureCooldown = true;
+                 setTimeout(() => gestureCooldown = false, 1500); 
+            }
+        } else if (isVictory) {
+             statusText.innerText = "✌️ 2 Fingers Detected";
+        } else if (isHandOpen) {
+            let depth = THREE.MathUtils.mapLinear(wristToMiddle, 0.3, 0.6, 12, ACTIVE_Z_MIN);
+            targetZoom = THREE.MathUtils.clamp(depth, ACTIVE_Z_MIN, 14);
+            statusText.innerText = "✋ Zooming In";
+        } else {
+            targetZoom = IDLE_Z;
+            statusText.innerText = "✊ Zooming Out / Orbiting";
+        }
+    }
+
+    const hands = new Hands({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`});
+    hands.setOptions({ maxNumHands: 1, modelComplexity: 0, minDetectionConfidence: 0.5 });
+    hands.onResults(onResults);
+    const cameraUtils = new Camera(videoElement, {
+        onFrame: async () => { await hands.send({image: videoElement}); },
+        width: 320, height: 240
+    });
+    cameraUtils.start();
+
+    // --- ANIMATION LOOP ---
+    function animate() {
+        requestAnimationFrame(animate);
+
+        particlesMesh.rotation.y += 0.0005; // Animate particles
+        particlesMesh.rotation.x -= 0.0002;
+
+        mouseRaycaster.setFromCamera(mouse, camera);
+        const mouseIntersects = mouseRaycaster.intersectObjects(imageGroup.children);
+        if (mouseIntersects.length > 0) {
+            if (mouseHoveredObject !== mouseIntersects[0].object) {
+                if (mouseHoveredObject) gsap.to(mouseHoveredObject.scale, { x: 1, y: 1, duration: 0.2 });
+                mouseHoveredObject = mouseIntersects[0].object;
+                gsap.to(mouseHoveredObject.scale, { x: 1.2, y: 1.2, duration: 0.3, ease: "back.out(2)" });
+                document.body.style.cursor = 'pointer';
+            }
+        } else if (mouseHoveredObject) {
+            gsap.to(mouseHoveredObject.scale, { x: 1, y: 1, duration: 0.2 });
+            mouseHoveredObject = null;
+            document.body.style.cursor = 'default';
+        }
+
+        centerRaycaster.setFromCamera(centerPoint, camera);
+        const centerIntersects = centerRaycaster.intersectObjects(imageGroup.children);
+        if (centerIntersects.length > 0) {
+            centerHoveredObject = centerIntersects[0].object;
+        } else {
+            centerHoveredObject = null;
+        }
+
+        if (isTracking && !modal.classList.contains('active')) {
+            imageGroup.rotation.y += (targetRotY - imageGroup.rotation.y) * 0.1;
+            imageGroup.rotation.x += (targetRotX - imageGroup.rotation.x) * 0.1;
+            camera.position.z += (targetZoom - camera.position.z) * 0.08;
+        } else {
+            imageGroup.rotation.y += AUTO_ROTATE_SPEED; 
+            imageGroup.rotation.x += (0 - imageGroup.rotation.x) * 0.05; 
+            camera.position.z += (IDLE_Z - camera.position.z) * 0.05;
+        }
+
+        renderer.render(scene, camera);
+    }
+    animate();
+
+    window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+</script>
+</body>
+</html>
