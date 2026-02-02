@@ -128,7 +128,6 @@
         @keyframes popIn { from { transform: scale(0.9); } to { transform: scale(1); } }
         @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
-        /* --- MOBILE RESPONSIVENESS --- */
         @media (max-width: 768px) {
             #page-title { top: 85px; font-size: 18px; padding: 10px 25px; width: 70%; white-space: normal; line-height: 1.2; }
             #helper-text { top: auto; bottom: 180px; left: 50%; transform: translateX(-50%); width: 85%; text-align: center; font-size: 13px; padding: 10px 20px; }
@@ -183,9 +182,9 @@
     const MAX_TEXTURE_SIZE = 1024; 
     const SPHERE_RADIUS = 5.5; 
     const TOTAL_IMAGES_COUNT = 68; 
-    const BASE_PLANE_SIZE = 1.6; 
+    const BASE_PLANE_SIZE = 1.8; 
     
-    const AUTO_ROTATE_SPEED = 0.0035; 
+    const AUTO_ROTATE_SPEED = 0.0005; 
 
     // --- YOUR EXACT DEFAULT IMAGES ---
     const defaultImages = [
@@ -618,12 +617,23 @@
         }
     }
 
+    // --- RESPONSIVE CAMERA LOGIC ---
+    // Check if device is mobile (narrow width)
+    const isMobile = window.innerWidth < 768;
+    
+    // Set Camera config based on device
+    const cameraConfig = isMobile 
+        ? { width: 480, height: 640 }  // Portrait for Mobile
+        : { width: 320, height: 240 }; // Landscape for Laptop
+
     const hands = new Hands({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`});
     hands.setOptions({ maxNumHands: 1, modelComplexity: 0, minDetectionConfidence: 0.5 });
     hands.onResults(onResults);
+    
     const cameraUtils = new Camera(videoElement, {
         onFrame: async () => { await hands.send({image: videoElement}); },
-        width: 320, height: 240
+        width: cameraConfig.width,
+        height: cameraConfig.height
     });
     cameraUtils.start();
 
