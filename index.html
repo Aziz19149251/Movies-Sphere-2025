@@ -43,7 +43,7 @@
         }
         button:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.15); background: #fff; }
 
-        /* --- HELPER TEXT (Default Desktop) --- */
+        /* --- DESKTOP HELPER TEXT --- */
         #helper-text { 
             position: absolute; top: 130px; left: 30px; transform: none;
             background: rgba(255,255,255,0.8); padding: 16px 24px; border-radius: 16px; 
@@ -59,10 +59,7 @@
             z-index: 5; background: #000;
         }
         
-        /* The video element is hidden, we draw on the canvas instead */
-        #webcam-video { display: none; }
-        
-        /* This canvas shows the video + the skeleton lines */
+        #webcam-video { display: none; } /* Hide raw video, show canvas */
         #output-canvas { width: 100%; height: 100%; transform: scaleX(-1); object-fit: cover; }
         
         #hand-status {
@@ -134,7 +131,7 @@
         @keyframes popIn { from { transform: scale(0.9); } to { transform: scale(1); } }
         @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
-        /* --- MOBILE RESPONSIVENESS (UPDATED) --- */
+        /* --- MOBILE SPECIFIC STYLES --- */
         @media (max-width: 768px) {
             #page-title { top: 85px; font-size: 18px; padding: 10px 25px; width: 70%; white-space: normal; line-height: 1.2; }
             #ui-buttons { top: 20px; left: 20px; }
@@ -143,19 +140,20 @@
             #movie-name { font-size: 22px; }
             #movie-desc { font-size: 12px; }
 
-            /* --- NEW MOBILE HELPER STYLE --- */
+            /* --- FIXED MOBILE HELPER TEXT --- */
+            /* Small, Bottom-Right, Above Webcam */
             #helper-text { 
-                top: auto; 
-                bottom: 20px; /* Move to bottom */
+                top: auto;
+                bottom: 190px; /* Sits safely above the webcam area */
                 left: auto;
-                right: 20px; /* Move to right */
+                right: 20px;
                 transform: none;
                 width: auto;
-                max-width: 140px; /* Keep it small */
+                max-width: 140px; 
+                padding: 10px 12px;
+                font-size: 10px; /* Smaller font */
                 text-align: right;
-                font-size: 10px; /* Tiny font */
-                padding: 10px 15px;
-                line-height: 1.4;
+                background: rgba(255, 255, 255, 0.75); /* More transparent */
             }
         }
     </style>
@@ -163,7 +161,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script> 
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.9.1/gsap.min.js"></script>
 </head>
 <body>
@@ -177,7 +175,7 @@
 
     <div id="helper-text">
         ✋ Open Hand : Zoom In<br>
-        ✊ Close Hand : Close<br>
+        ✊ Close Hand : Close / Out<br>
         🕹️ Move : Orbit<br>
         ✌️ 2 Fingers : Open
     </div>
@@ -186,7 +184,8 @@
     
     <div id="webcam-container">
         <video id="webcam-video" playsinline></video>
-        <canvas id="output-canvas"></canvas> <div id="hand-status">Waiting for hand...</div>
+        <canvas id="output-canvas"></canvas>
+        <div id="hand-status">Waiting for hand...</div>
     </div>
     
     <div id="modal">
@@ -204,9 +203,9 @@
     const MAX_TEXTURE_SIZE = 1024; 
     const SPHERE_RADIUS = 5.5; 
     const TOTAL_IMAGES_COUNT = 68; 
-    const BASE_PLANE_SIZE = 1.6; // Updated as requested
+    const BASE_PLANE_SIZE = 1.6; 
     
-    const AUTO_ROTATE_SPEED = 0.0035; // Updated as requested
+    const AUTO_ROTATE_SPEED = 0.0035; 
 
     // --- YOUR EXACT DEFAULT IMAGES ---
     const defaultImages = [
@@ -229,7 +228,7 @@
         "the-grinch.jpg", "the-sixth-sense poster.jpg", "thor-1.jpg", "Whiplash Poster.jpg", "Zodiac Poster.jpg"
     ];
 
-    // --- METADATA DATABASE (For AI Logic) ---
+    // --- METADATA DATABASE ---
     const movieDatabase = [
         { title: "5 Centimeters per Second", desc: "A beautifully animated romantic drama about distance and fading love.", url: "https://www.crunchyroll.com/series/GRPX19116/5-centimeters-per-second", platform: "Crunchyroll" },
         { title: "10 Things I Hate About You", desc: "A modern high school retelling of Shakespeare's Taming of the Shrew.", url: "https://www.disneyplus.com/movies/10-things-i-hate-about-you/35073007", platform: "Disney+" },
